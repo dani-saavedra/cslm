@@ -1,0 +1,71 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cslm-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-cslm}
+      MYSQL_USER: ${DB_USERNAME:-cslm}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-cslm}
+    ports:
+      - "3306:3306"
+    volumes:
+      - cslm-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: cslm-mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI to inspect sent emails
+      - "1025:1025" # SMTP
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cslm-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-cslm}
+      DB_USERNAME: ${DB_USERNAME:-cslm}
+      DB_PASSWORD: ${DB_PASSWORD:-cslm}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: "false"
+      SMTP_STARTTLS: "false"
+      SMTP_FROM: ${SMTP_FROM:-cslm-noreply@example.com}
+      JWT_SECRET: ${JWT_SECRET:-change-this-super-secret-key-for-cslm-please-override-in-prod-0123456789}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-480}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081}
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+      NOTIFICATIONS_CRON: ${NOTIFICATIONS_CRON:-0 0 7 * * *}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: cslm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  cslm-mysql-data:

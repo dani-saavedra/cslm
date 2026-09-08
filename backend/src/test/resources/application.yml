@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:cslm_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  mail:
+    host: localhost
+    port: 3025
+
+cslm:
+  mail:
+    from: test@cslm.example.com
+  jwt:
+    secret: test-secret-key-for-cslm-unit-and-integration-tests-0123456789
+    expiration-minutes: 60
+  cors:
+    allowed-origins: http://localhost:5173
+  notifications:
+    enabled: false

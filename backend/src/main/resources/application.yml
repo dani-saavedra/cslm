@@ -51,8 +51,6 @@ cslm:
   jwt:
     secret: ${JWT_SECRET:change-this-super-secret-key-for-cslm-please-override-in-prod-0123456789}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   notifications:
     enabled: ${NOTIFICATIONS_ENABLED:true}
     cron: ${NOTIFICATIONS_CRON:0 0 7 * * *}

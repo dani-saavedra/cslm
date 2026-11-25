@@ -71,6 +71,7 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
       contactEmail: form.contactEmail || null,
       notes: form.notes || null,
       status: form.status || 'ACTIVE',
+      lastChangeReference: form.lastChangeReference || null,
       applicationIds: selectedApps.map((a) => a.id),
     };
     try {
@@ -220,6 +221,16 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
               isOptionEqualToValue={(a, b) => a.id === b.id}
               onChange={(_, value) => setSelectedApps(value)}
               renderInput={(params) => <TextField {...params} label="Aplicaciones" />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Referencia de Cambio (CHG) / Requerimiento (RITM)"
+              placeholder="Ej: CHG0012345 o RITM0098765"
+              helperText="Número de CHG o RITM con el que se realizó la última actualización"
+              fullWidth
+              value={form.lastChangeReference || ''}
+              onChange={(e) => set('lastChangeReference', e.target.value)}
             />
           </Grid>
           <Grid item xs={12}>

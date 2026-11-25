@@ -18,7 +18,7 @@ public class CertificateDtos {
             Long daysRemaining, String semaphoreStatus,
             Long environmentId, String environmentName,
             String owner, Long teamId, String teamName, String contactEmail,
-            String notes, String status,
+            String notes, String status, String lastChangeReference,
             List<CommonDtos.ApplicationSummary> applications,
             List<CommonDtos.DeploymentSummary> deployments,
             LocalDateTime createdAt, LocalDateTime updatedAt
@@ -33,6 +33,7 @@ public class CertificateDtos {
             @NotNull LocalDate expirationDate,
             @NotNull Long environmentId,
             String owner, Long teamId, String contactEmail, String notes, String status,
+            String lastChangeReference,
             List<Long> applicationIds
     ) {}
 }

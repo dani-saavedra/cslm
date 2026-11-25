@@ -50,6 +50,7 @@ export interface Certificate {
   contactEmail: string | null;
   notes: string | null;
   status: string;
+  lastChangeReference: string | null;
   applications: ApplicationSummary[];
   deployments: DeploymentSummary[];
   createdAt: string;

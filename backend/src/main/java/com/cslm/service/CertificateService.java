@@ -55,6 +55,7 @@ public class CertificateService {
         auditService.logFieldChange("Certificate", id, "expirationDate", cert.getExpirationDate(), request.expirationDate());
         auditService.logFieldChange("Certificate", id, "status", cert.getStatus(), request.status());
         auditService.logFieldChange("Certificate", id, "owner", cert.getOwner(), request.owner());
+        auditService.logFieldChange("Certificate", id, "lastChangeReference", cert.getLastChangeReference(), request.lastChangeReference());
         applyRequest(cert, request);
         cert = certificateRepository.save(cert);
         if (request.applicationIds() != null) {
@@ -96,6 +97,7 @@ public class CertificateService {
                 teamRepository.findById(request.teamId()).orElseThrow(() -> ResourceNotFoundException.of("Team", request.teamId())));
         cert.setContactEmail(request.contactEmail());
         cert.setNotes(request.notes());
+        cert.setLastChangeReference(request.lastChangeReference());
         if (request.status() != null) {
             cert.setStatus(request.status());
         } else if (cert.getStatus() == null) {
@@ -141,6 +143,7 @@ public class CertificateService {
                 c.getEnvironment().getId(), c.getEnvironment().getName(),
                 c.getOwner(), c.getTeam() == null ? null : c.getTeam().getId(),
                 c.getTeam() == null ? null : c.getTeam().getName(), c.getContactEmail(),
-                c.getNotes(), c.getStatus(), applications, deployments, c.getCreatedAt(), c.getUpdatedAt());
+                c.getNotes(), c.getStatus(), c.getLastChangeReference(),
+                applications, deployments, c.getCreatedAt(), c.getUpdatedAt());
     }
 }

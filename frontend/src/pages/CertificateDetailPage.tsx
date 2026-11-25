@@ -103,6 +103,7 @@ export default function CertificateDetailPage() {
             <Field label="Propietario" value={cert.owner} />
             <Field label="Equipo" value={cert.teamName} />
             <Field label="Correo de contacto" value={cert.contactEmail} />
+            <Field label="Referencia de Cambio (CHG) / Requerimiento (RITM)" value={cert.lastChangeReference} />
           </Grid>
           <Grid item xs={12} md={4}>
             <Typography variant="caption" color="text.secondary" display="block">

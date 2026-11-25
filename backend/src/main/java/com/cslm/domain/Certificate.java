@@ -73,6 +73,10 @@ public class Certificate {
     @Builder.Default
     private String status = "ACTIVE";
 
+    // Última referencia de cambio (CHG) o requerimiento (RITM) con la que se actualizó el certificado
+    @Column(name = "last_change_reference", length = 50)
+    private String lastChangeReference;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

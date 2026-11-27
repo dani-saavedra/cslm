@@ -1,0 +1,25 @@
+name: Integracion Continua
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - master
+      - desarrollo
+      - xxx
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repo
+        uses: actions/checkout@v7
+      - name: Instalar Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: instalar gradle
+        uses: gradle/gradle-build-action@v2
+      - name: compilar
+        run: ./gradlew build
+          #un use es llamar un action, y un action es una pieza de lego reutilizable

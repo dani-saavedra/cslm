@@ -110,6 +110,7 @@ public class CertificateService {
             return;
         }
         applicationAssetRepository.deleteByAssetTypeAndAssetId(AssetCategory.CERTIFICATE, certificateId);
+        applicationAssetRepository.flush();
         for (Long appId : applicationIds) {
             var app = applicationRepository.findById(appId).orElseThrow(() -> ResourceNotFoundException.of("Application", appId));
             applicationAssetRepository.save(ApplicationAsset.builder()

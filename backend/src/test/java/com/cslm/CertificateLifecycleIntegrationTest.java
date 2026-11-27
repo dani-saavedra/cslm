@@ -146,6 +146,45 @@ class CertificateLifecycleIntegrationTest {
         assertThat(historyEntries).anyMatch(e -> certificateId.equals(((Number) e.get("assetId")).longValue()));
     }
 
+    @Test
+    void updatingCertificateKeepingSameApplicationDoesNotThrowDuplicateKey() {
+        Map<String, Object> appPayload = Map.of(
+                "name", "Dup Key App", "code", "DUP-APP-" + System.nanoTime(),
+                "criticality", "HIGH", "status", "ACTIVE");
+        Long applicationId = ((Number) postJson("/api/applications", appPayload).getBody().get("id")).longValue();
+
+        Map<String, Object> envPayload = Map.of("name", "Dup Env", "code", "DUP-ENV-" + System.nanoTime());
+        Long environmentId = ((Number) postJson("/api/environments", envPayload).getBody().get("id")).longValue();
+
+        Map<String, Object> certPayload = Map.of(
+                "name", "dup-key-cert",
+                "expirationDate", LocalDate.now().plusDays(15).toString(),
+                "environmentId", environmentId,
+                "owner", "Test Owner",
+                "contactEmail", "owner@example.com",
+                "applicationIds", List.of(applicationId));
+        Long certificateId = ((Number) postJson("/api/certificates", certPayload).getBody().get("id")).longValue();
+
+        // Re-sending the same application link on update used to fail with a duplicate-key
+        // error, because the old link was deleted and the identical new link re-inserted in
+        // the same transaction without an intervening flush.
+        Map<String, Object> updatePayload = Map.of(
+                "name", "dup-key-cert",
+                "expirationDate", LocalDate.now().plusDays(200).toString(),
+                "environmentId", environmentId,
+                "owner", "Test Owner",
+                "contactEmail", "owner@example.com",
+                "applicationIds", List.of(applicationId));
+        HttpHeaders headers = authHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<Map> updateResponse = restTemplate.exchange(
+                url("/api/certificates/" + certificateId), HttpMethod.PUT,
+                new HttpEntity<>(updatePayload, headers), Map.class);
+
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List) updateResponse.getBody().get("applications")).hasSize(1);
+    }
+
     private ResponseEntity<Map> postJson(String path, Object payload) {
         HttpHeaders headers = authHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

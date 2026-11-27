@@ -103,6 +103,7 @@ public class SecretService {
             return;
         }
         applicationAssetRepository.deleteByAssetTypeAndAssetId(AssetCategory.SECRET, secretId);
+        applicationAssetRepository.flush();
         for (Long appId : applicationIds) {
             var app = applicationRepository.findById(appId).orElseThrow(() -> ResourceNotFoundException.of("Application", appId));
             applicationAssetRepository.save(ApplicationAsset.builder()

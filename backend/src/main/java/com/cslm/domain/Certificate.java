@@ -80,7 +80,7 @@ public class Certificate {
     // Public certificate content (PEM, X.509) uploaded by the user, kept so it can be
     // downloaded later as a .crt file. Never holds private key material.
     @Lob
-    @Column(name = "certificate_pem")
+    @Column(name = "certificate_pem", columnDefinition = "LONGTEXT")
     private String certificatePem;
 
     @Column(name = "created_at", updatable = false)

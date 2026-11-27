@@ -2,6 +2,7 @@ package com.cslm.service;
 
 import com.cslm.domain.*;
 import com.cslm.repository.NotificationHistoryRepository;
+import com.cslm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,28 +13,36 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
 
+    private static final String NO_RECIPIENT_PLACEHOLDER = "(no recipient configured)";
+
     private final JavaMailSender mailSender;
     private final NotificationHistoryRepository notificationHistoryRepository;
+    private final UserRepository userRepository;
     private final SemaphoreService semaphoreService;
 
     @Value("${cslm.mail.from}")
     private String fromAddress;
 
     /**
-     * Sends the expiration notification for a certificate or secret and records the outcome
-     * in notification_history, regardless of success/failure.
+     * Sends the expiration notification for a certificate or secret to its configured contact
+     * email and to every active user belonging to its responsible team, recording the outcome
+     * of each send in notification_history, regardless of success/failure.
      */
-    public NotificationHistory sendExpirationNotification(AssetCategory assetType, Long assetId, String assetName,
-                                                            String applicationNames, String environmentName,
-                                                            String owner, String recipient,
-                                                            LocalDate expirationDate, String location,
-                                                            NotificationRule rule) {
+    public List<NotificationHistory> sendExpirationNotification(AssetCategory assetType, Long assetId, String assetName,
+                                                                  String applicationNames, String environmentName,
+                                                                  String owner, Team team, String contactEmail,
+                                                                  LocalDate expirationDate, String location,
+                                                                  NotificationRule rule) {
         long daysRemaining = semaphoreService.daysRemaining(expirationDate);
         SemaphoreStatus status = semaphoreService.statusFor(expirationDate);
 
@@ -41,32 +50,61 @@ public class NotificationService {
         String body = buildBody(assetType, assetName, applicationNames, environmentName, owner,
                 expirationDate, daysRemaining, status, location);
 
-        NotificationHistory.NotificationHistoryBuilder historyBuilder = NotificationHistory.builder()
-                .assetType(assetType)
-                .assetId(assetId)
-                .rule(rule)
-                .recipient(recipient)
-                .subject(subject)
-                .body(body)
-                .sentAt(LocalDateTime.now());
-
-        try {
-            if (recipient == null || recipient.isBlank()) {
-                throw new IllegalArgumentException("No recipient email configured for this asset");
-            }
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromAddress);
-            message.setTo(recipient);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
-            historyBuilder.status("SENT");
-        } catch (Exception e) {
-            log.warn("Failed to send notification for {} #{}: {}", assetType, assetId, e.getMessage());
-            historyBuilder.status("FAILED").errorMessage(e.getMessage());
+        Set<String> recipients = resolveRecipients(team, contactEmail);
+        if (recipients.isEmpty()) {
+            recipients = Set.of(NO_RECIPIENT_PLACEHOLDER);
         }
 
-        return notificationHistoryRepository.save(historyBuilder.build());
+        List<NotificationHistory> histories = new ArrayList<>();
+        for (String recipient : recipients) {
+            NotificationHistory.NotificationHistoryBuilder historyBuilder = NotificationHistory.builder()
+                    .assetType(assetType)
+                    .assetId(assetId)
+                    .rule(rule)
+                    .recipient(recipient)
+                    .subject(subject)
+                    .body(body)
+                    .sentAt(LocalDateTime.now());
+
+            try {
+                if (recipient.equals(NO_RECIPIENT_PLACEHOLDER)) {
+                    throw new IllegalArgumentException("No recipient email configured for this asset");
+                }
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(fromAddress);
+                message.setTo(recipient);
+                message.setSubject(subject);
+                message.setText(body);
+                mailSender.send(message);
+                historyBuilder.status("SENT");
+            } catch (Exception e) {
+                log.warn("Failed to send notification for {} #{} to {}: {}", assetType, assetId, recipient, e.getMessage());
+                historyBuilder.status("FAILED").errorMessage(e.getMessage());
+            }
+
+            histories.add(notificationHistoryRepository.save(historyBuilder.build()));
+        }
+        return histories;
+    }
+
+    /**
+     * Union of the asset's direct contact email and the emails of every active user
+     * belonging to its responsible team, so a team-addressed notification reaches all its members.
+     */
+    private Set<String> resolveRecipients(Team team, String contactEmail) {
+        Set<String> recipients = new LinkedHashSet<>();
+        if (contactEmail != null && !contactEmail.isBlank()) {
+            recipients.add(contactEmail.trim());
+        }
+        if (team != null) {
+            userRepository.findByTeams_IdAndActiveTrue(team.getId()).forEach(user -> {
+                String email = user.getEmail();
+                if (email != null && !email.isBlank()) {
+                    recipients.add(email.trim());
+                }
+            });
+        }
+        return recipients;
     }
 
     public boolean alreadyNotifiedToday(AssetCategory assetType, Long assetId, Long ruleId) {

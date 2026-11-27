@@ -41,13 +41,15 @@ public class NotificationHistoryService {
                     .orElseThrow(() -> ResourceNotFoundException.of("Certificate", request.assetId()));
             history = notificationService.sendExpirationNotification(type, cert.getId(), cert.getName(),
                     applicationNames(type, cert.getId()), cert.getEnvironment().getName(), cert.getOwner(),
-                    cert.getContactEmail(), cert.getExpirationDate(), locationSummary(type, cert.getId()), null);
+                    cert.getTeam(), cert.getContactEmail(), cert.getExpirationDate(),
+                    locationSummary(type, cert.getId()), null).get(0);
         } else {
             Secret secret = secretRepository.findById(request.assetId())
                     .orElseThrow(() -> ResourceNotFoundException.of("Secret", request.assetId()));
             history = notificationService.sendExpirationNotification(type, secret.getId(), secret.getName(),
                     applicationNames(type, secret.getId()), secret.getEnvironment().getName(), secret.getOwner(),
-                    secret.getContactEmail(), secret.getExpirationDate(), locationSummary(type, secret.getId()), null);
+                    secret.getTeam(), secret.getContactEmail(), secret.getExpirationDate(),
+                    locationSummary(type, secret.getId()), null).get(0);
         }
         return toResponse(history);
     }

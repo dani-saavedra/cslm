@@ -1,5 +1,6 @@
 package com.cslm.dto;
 
+import com.cslm.dto.TeamDtos.TeamResponse;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,6 +18,7 @@ public class UserDtos {
             String fullName,
             Boolean active,
             Set<String> roles,
+            Set<TeamResponse> teams,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {}
@@ -26,7 +28,8 @@ public class UserDtos {
             @NotBlank @Email String email,
             String fullName,
             @NotBlank String password,
-            @NotEmpty List<String> roles
+            @NotEmpty List<String> roles,
+            List<Long> teamIds
     ) {}
 
     public record UpdateUserRequest(
@@ -34,6 +37,7 @@ public class UserDtos {
             String fullName,
             Boolean active,
             String password,
-            List<String> roles
+            List<String> roles,
+            List<Long> teamIds
     ) {}
 }

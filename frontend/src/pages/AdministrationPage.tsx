@@ -626,6 +626,7 @@ function SettingsTab({ isAdmin }: { isAdmin: boolean }) {
 
 function UsersTab({ isAdmin }: { isAdmin: boolean }) {
   const [rows, setRows] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState<Record<string, any>>({});
@@ -633,6 +634,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
 
   function load() {
     listUsers().then(setRows);
+    listTeams().then(setTeams);
   }
   useEffect(load, []);
 
@@ -640,9 +642,9 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
     setError(null);
     try {
       if (editing) {
-        await updateUser(editing.id, { email: form.email, fullName: form.fullName, active: form.active, password: form.password || undefined, roles: form.roles });
+        await updateUser(editing.id, { email: form.email, fullName: form.fullName, active: form.active, password: form.password || undefined, roles: form.roles, teamIds: form.teamIds || [] });
       } else {
-        await createUser({ username: form.username, email: form.email, fullName: form.fullName, password: form.password, roles: form.roles || ['VIEWER'] });
+        await createUser({ username: form.username, email: form.email, fullName: form.fullName, password: form.password, roles: form.roles || ['VIEWER'], teamIds: form.teamIds || [] });
       }
       setOpen(false);
       load();
@@ -658,7 +660,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
           startIcon={<AddIcon />}
           onClick={() => {
             setEditing(null);
-            setForm({ roles: ['VIEWER'], active: true });
+            setForm({ roles: ['VIEWER'], active: true, teamIds: [] });
             setError(null);
             setOpen(true);
           }}
@@ -674,6 +676,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
             <TableCell>Correo</TableCell>
             <TableCell>Nombre completo</TableCell>
             <TableCell>Roles</TableCell>
+            <TableCell>Equipos</TableCell>
             <TableCell>Activo</TableCell>
             {isAdmin && <TableCell align="right">Acciones</TableCell>}
           </TableRow>
@@ -685,6 +688,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
               <TableCell>{u.email}</TableCell>
               <TableCell>{u.fullName || '-'}</TableCell>
               <TableCell>{u.roles.join(', ')}</TableCell>
+              <TableCell>{(u.teams || []).map((t) => t.name).join(', ') || '-'}</TableCell>
               <TableCell>{u.active ? 'Sí' : 'No'}</TableCell>
               {isAdmin && (
                 <TableCell align="right">
@@ -692,7 +696,7 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
                     size="small"
                     onClick={() => {
                       setEditing(u);
-                      setForm({ ...u, password: '' });
+                      setForm({ ...u, password: '', teamIds: (u.teams || []).map((t) => t.id) });
                       setError(null);
                       setOpen(true);
                     }}
@@ -740,6 +744,20 @@ function UsersTab({ isAdmin }: { isAdmin: boolean }) {
             {['ADMIN', 'OPERATOR', 'VIEWER'].map((r) => (
               <MenuItem key={r} value={r}>
                 {r}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Equipos"
+            helperText="Las notificaciones dirigidas al equipo se envían a todos sus miembros"
+            SelectProps={{ multiple: true }}
+            value={form.teamIds || []}
+            onChange={(e) => setForm((f: any) => ({ ...f, teamIds: e.target.value }))}
+          >
+            {teams.map((t) => (
+              <MenuItem key={t.id} value={t.id}>
+                {t.name}
               </MenuItem>
             ))}
           </TextField>

@@ -260,6 +260,7 @@ export interface User {
   fullName: string | null;
   active: boolean;
   roles: string[];
+  teams: Team[];
   createdAt: string;
   updatedAt: string;
 }

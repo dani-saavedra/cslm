@@ -2,13 +2,16 @@ package com.cslm.service;
 
 import com.cslm.audit.AuditService;
 import com.cslm.domain.Role;
+import com.cslm.domain.Team;
 import com.cslm.domain.User;
+import com.cslm.dto.TeamDtos.TeamResponse;
 import com.cslm.dto.UserDtos.CreateUserRequest;
 import com.cslm.dto.UserDtos.UpdateUserRequest;
 import com.cslm.dto.UserDtos.UserResponse;
 import com.cslm.exception.BadRequestException;
 import com.cslm.exception.ResourceNotFoundException;
 import com.cslm.repository.RoleRepository;
+import com.cslm.repository.TeamRepository;
 import com.cslm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +30,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final TeamRepository teamRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
@@ -48,6 +52,7 @@ public class UserService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .active(true)
                 .roles(resolveRoles(request.roles()))
+                .teams(resolveTeams(request.teamIds()))
                 .build();
         user = userRepository.save(user);
         auditService.logCreate("User", user.getId());
@@ -65,6 +70,9 @@ public class UserService {
         }
         if (request.roles() != null) {
             user.setRoles(resolveRoles(request.roles()));
+        }
+        if (request.teamIds() != null) {
+            user.setTeams(resolveTeams(request.teamIds()));
         }
         return toResponse(userRepository.save(user));
     }
@@ -84,6 +92,18 @@ public class UserService {
         return roles;
     }
 
+    private Set<Team> resolveTeams(List<Long> teamIds) {
+        if (teamIds == null || teamIds.isEmpty()) {
+            return new HashSet<>();
+        }
+        Set<Team> teams = new HashSet<>();
+        for (Long teamId : teamIds) {
+            teams.add(teamRepository.findById(teamId)
+                    .orElseThrow(() -> new BadRequestException("Unknown team: " + teamId)));
+        }
+        return teams;
+    }
+
     private User getEntity(Long id) {
         return userRepository.findById(id).orElseThrow(() -> ResourceNotFoundException.of("User", id));
     }
@@ -91,6 +111,9 @@ public class UserService {
     private UserResponse toResponse(User u) {
         return new UserResponse(u.getId(), u.getUsername(), u.getEmail(), u.getFullName(), u.getActive(),
                 u.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
+                u.getTeams().stream()
+                        .map(t -> new TeamResponse(t.getId(), t.getName(), t.getDescription(), t.getActive(), t.getCreatedAt(), t.getUpdatedAt()))
+                        .collect(Collectors.toSet()),
                 u.getCreatedAt(), u.getUpdatedAt());
     }
 }

@@ -56,21 +56,23 @@ public class ExpirationNotificationJob {
         int sent = 0;
         for (Certificate cert : certificateRepository.findAll()) {
             sent += processAsset(rules, "CERTIFICATE", AssetCategory.CERTIFICATE, cert.getId(), cert.getName(),
-                    cert.getExpirationDate(), cert.getEnvironment().getName(), cert.getOwner(), cert.getContactEmail());
+                    cert.getExpirationDate(), cert.getEnvironment().getName(), cert.getOwner(), cert.getTeam(),
+                    cert.getContactEmail());
         }
         for (Secret secret : secretRepository.findAll()) {
             if (secret.getExpirationDate() == null) {
                 continue;
             }
             sent += processAsset(rules, "SECRET", AssetCategory.SECRET, secret.getId(), secret.getName(),
-                    secret.getExpirationDate(), secret.getEnvironment().getName(), secret.getOwner(), secret.getContactEmail());
+                    secret.getExpirationDate(), secret.getEnvironment().getName(), secret.getOwner(), secret.getTeam(),
+                    secret.getContactEmail());
         }
         log.info("Expiration notification job finished: {} email(s) sent", sent);
     }
 
     private int processAsset(List<NotificationRule> rules, String category, AssetCategory assetType, Long assetId,
                               String name, java.time.LocalDate expirationDate, String environmentName, String owner,
-                              String contactEmail) {
+                              Team team, String contactEmail) {
         if (expirationDate == null) {
             return 0;
         }
@@ -89,9 +91,9 @@ public class ExpirationNotificationJob {
             String location = assetDeploymentRepository.findByAssetTypeAndAssetId(assetType, assetId).stream()
                     .map(d -> d.getDeploymentLocation().getName()).distinct().collect(Collectors.joining(", "));
 
-            notificationService.sendExpirationNotification(assetType, assetId, name, applicationNames,
-                    environmentName, owner, contactEmail, expirationDate, location, rule);
-            sent++;
+            List<NotificationHistory> histories = notificationService.sendExpirationNotification(assetType, assetId,
+                    name, applicationNames, environmentName, owner, team, contactEmail, expirationDate, location, rule);
+            sent += (int) histories.stream().filter(h -> "SENT".equals(h.getStatus())).count();
         }
         return sent;
     }

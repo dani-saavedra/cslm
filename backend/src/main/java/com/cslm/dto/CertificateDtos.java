@@ -19,6 +19,7 @@ public class CertificateDtos {
             Long environmentId, String environmentName,
             String owner, Long teamId, String teamName, String contactEmail,
             String notes, String status, String lastChangeReference,
+            boolean certificateFilePresent,
             List<CommonDtos.ApplicationSummary> applications,
             List<CommonDtos.DeploymentSummary> deployments,
             LocalDateTime createdAt, LocalDateTime updatedAt
@@ -34,6 +35,21 @@ public class CertificateDtos {
             @NotNull Long environmentId,
             String owner, Long teamId, String contactEmail, String notes, String status,
             String lastChangeReference,
+            // PEM content of the uploaded certificate file; null/omitted means "keep whatever is stored".
+            String certificatePem,
             List<Long> applicationIds
     ) {}
+
+    // Metadata extracted by reading an uploaded X.509 certificate file (PEM/DER/CRT/CER).
+    public record CertificateParseResponse(
+            String commonName, String subject, String issuer, String serialNumber,
+            String algorithm, Integer keySize,
+            LocalDate issueDate, LocalDate expirationDate,
+            String suggestedName,
+            // Normalized PEM content of the uploaded certificate, to be stored via create/update.
+            String certificatePem
+    ) {}
+
+    // Downloadable public certificate content.
+    public record CertificateFileResponse(String fileName, String pem) {}
 }

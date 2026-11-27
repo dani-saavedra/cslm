@@ -5,6 +5,7 @@ import type {
   Application,
   AssetType,
   Certificate,
+  CertificateParseResult,
   DashboardSummary,
   DeploymentLocation,
   Environment,
@@ -57,6 +58,29 @@ export const updateCertificate = (id: number, payload: Record<string, unknown>) 
 export const deleteCertificate = (id: number) => apiClient.delete(`/certificates/${id}`);
 export const getCertificateDependencies = (id: number) =>
   apiClient.get<GraphResponse>(`/certificates/${id}/dependencies`).then((r) => r.data);
+export const parseCertificateFile = (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient
+    .post<CertificateParseResult>('/certificates/parse', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data);
+};
+export async function downloadCertificateFile(id: number) {
+  const response = await apiClient.get<Blob>(`/certificates/${id}/file`, { responseType: 'blob' });
+  const disposition = response.headers['content-disposition'] as string | undefined;
+  const match = disposition?.match(/filename="?([^"]+)"?/);
+  const fileName = match?.[1] || `certificate-${id}.crt`;
+  const url = window.URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
 
 // ---- Secrets ----
 export const searchSecrets = (params: AssetSearchParams) =>

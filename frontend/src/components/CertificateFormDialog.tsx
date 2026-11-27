@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -10,9 +10,11 @@ import {
   Grid,
   MenuItem,
   TextField,
+  Typography,
 } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import type { Application, AssetType, Certificate, Environment, Team } from '../types';
-import { createCertificate, searchApplications, updateCertificate } from '../api/endpoints';
+import { createCertificate, parseCertificateFile, searchApplications, updateCertificate } from '../api/endpoints';
 import { errorMessage } from '../api/client';
 import { statusLabel } from '../i18n';
 
@@ -32,6 +34,8 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
   const [selectedApps, setSelectedApps] = useState<Application[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -43,11 +47,40 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
       );
       setSelectedApps(certificate?.applications.map((a) => ({ id: a.id, name: a.name, code: a.code } as Application)) ?? []);
       setError(null);
+      setParseError(null);
     }
   }, [open, certificate, environments]);
 
   function set(field: string, value: unknown) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleFileSelected(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setParsing(true);
+    setParseError(null);
+    try {
+      const parsed = await parseCertificateFile(file);
+      setForm((f) => ({
+        ...f,
+        name: f.name || parsed.suggestedName || f.name,
+        commonName: parsed.commonName ?? f.commonName,
+        subject: parsed.subject ?? f.subject,
+        issuer: parsed.issuer ?? f.issuer,
+        serialNumber: parsed.serialNumber ?? f.serialNumber,
+        algorithm: parsed.algorithm ?? f.algorithm,
+        keySize: parsed.keySize ?? f.keySize,
+        issueDate: parsed.issueDate ?? f.issueDate,
+        expirationDate: parsed.expirationDate ?? f.expirationDate,
+        certificatePem: parsed.certificatePem ?? f.certificatePem,
+      }));
+    } catch (err) {
+      setParseError(errorMessage(err));
+    } finally {
+      setParsing(false);
+    }
   }
 
   async function handleSave() {
@@ -72,6 +105,9 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
       notes: form.notes || null,
       status: form.status || 'ACTIVE',
       lastChangeReference: form.lastChangeReference || null,
+      // Only sent when a new file was uploaded in this session; omitted otherwise so the
+      // backend keeps whatever certificate file is already stored.
+      certificatePem: form.certificatePem || undefined,
       applicationIds: selectedApps.map((a) => a.id),
     };
     try {
@@ -97,6 +133,28 @@ export default function CertificateFormDialog({ open, onClose, onSaved, certific
             {error}
           </Alert>
         )}
+
+        <Button variant="outlined" component="label" startIcon={<UploadFileIcon />} disabled={parsing}>
+          {parsing ? 'Leyendo certificado...' : 'Cargar archivo de certificado'}
+          <input type="file" hidden accept=".pem,.crt,.cer,.der,.txt" onChange={handleFileSelected} />
+        </Button>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+          Acepta archivos PEM, CRT, CER o DER. Los campos se completan automáticamente a partir del certificado; la
+          clave privada nunca se almacena en CSLM, solo el certificado público para poder descargarlo luego.
+        </Typography>
+        {(form.certificatePem || certificate?.certificateFilePresent) && (
+          <Typography variant="caption" color="success.main" display="block" sx={{ mt: 0.5 }}>
+            {form.certificatePem
+              ? 'Archivo de certificado listo para guardar.'
+              : 'Este certificado ya tiene un archivo cargado.'}
+          </Typography>
+        )}
+        {parseError && (
+          <Alert severity="error" sx={{ mt: 1 }} onClose={() => setParseError(null)}>
+            {parseError}
+          </Alert>
+        )}
+
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid item xs={12} sm={6}>
             <TextField label="Nombre" fullWidth required value={form.name || ''} onChange={(e) => set('name', e.target.value)} />

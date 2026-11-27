@@ -77,6 +77,12 @@ public class Certificate {
     @Column(name = "last_change_reference", length = 50)
     private String lastChangeReference;
 
+    // Public certificate content (PEM, X.509) uploaded by the user, kept so it can be
+    // downloaded later as a .crt file. Never holds private key material.
+    @Lob
+    @Column(name = "certificate_pem")
+    private String certificatePem;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

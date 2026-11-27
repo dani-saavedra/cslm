@@ -2,10 +2,12 @@ package com.cslm.service;
 
 import com.cslm.audit.AuditService;
 import com.cslm.domain.*;
+import com.cslm.dto.CertificateDtos.CertificateFileResponse;
 import com.cslm.dto.CertificateDtos.CertificateRequest;
 import com.cslm.dto.CertificateDtos.CertificateResponse;
 import com.cslm.dto.CommonDtos.ApplicationSummary;
 import com.cslm.dto.CommonDtos.DeploymentSummary;
+import com.cslm.exception.BadRequestException;
 import com.cslm.exception.ResourceNotFoundException;
 import com.cslm.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +78,16 @@ public class CertificateService {
         return certificateRepository.findById(id).orElseThrow(() -> ResourceNotFoundException.of("Certificate", id));
     }
 
+    public CertificateFileResponse getFile(Long id) {
+        Certificate cert = getEntity(id);
+        if (cert.getCertificatePem() == null) {
+            throw new BadRequestException("Este certificado no tiene un archivo cargado.");
+        }
+        String safeName = (cert.getAlias() != null ? cert.getAlias() : cert.getName())
+                .replaceAll("[^a-zA-Z0-9._-]", "_");
+        return new CertificateFileResponse(safeName + ".crt", cert.getCertificatePem());
+    }
+
     private void applyRequest(Certificate cert, CertificateRequest request) {
         cert.setName(request.name());
         cert.setAlias(request.alias());
@@ -98,6 +110,9 @@ public class CertificateService {
         cert.setContactEmail(request.contactEmail());
         cert.setNotes(request.notes());
         cert.setLastChangeReference(request.lastChangeReference());
+        if (request.certificatePem() != null) {
+            cert.setCertificatePem(request.certificatePem());
+        }
         if (request.status() != null) {
             cert.setStatus(request.status());
         } else if (cert.getStatus() == null) {
@@ -145,6 +160,7 @@ public class CertificateService {
                 c.getOwner(), c.getTeam() == null ? null : c.getTeam().getId(),
                 c.getTeam() == null ? null : c.getTeam().getName(), c.getContactEmail(),
                 c.getNotes(), c.getStatus(), c.getLastChangeReference(),
+                c.getCertificatePem() != null,
                 applications, deployments, c.getCreatedAt(), c.getUpdatedAt());
     }
 }

@@ -4,7 +4,15 @@ import { Box, Button, Chip, Divider, Grid, Paper, Stack, Typography } from '@mui
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getCertificate, listAssetTypes, listEnvironments, listTeams, sendTestNotification } from '../api/endpoints';
+import DownloadIcon from '@mui/icons-material/Download';
+import {
+  downloadCertificateFile,
+  getCertificate,
+  listAssetTypes,
+  listEnvironments,
+  listTeams,
+  sendTestNotification,
+} from '../api/endpoints';
 import type { AssetType, Certificate, Environment, Team } from '../types';
 import SemaphoreChip from '../components/SemaphoreChip';
 import CertificateFormDialog from '../components/CertificateFormDialog';
@@ -73,6 +81,11 @@ export default function CertificateDetailPage() {
             </Stack>
           </Box>
           <Stack direction="row" spacing={1}>
+            {cert.certificateFilePresent && (
+              <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => downloadCertificateFile(cert.id)}>
+                Descargar CRT
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<AccountTreeIcon />} component={RouterLink} to={`/graph/certificate/${cert.id}`}>
               Ver dependencias
             </Button>

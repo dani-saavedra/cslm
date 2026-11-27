@@ -26,6 +26,19 @@ export interface DeploymentSummary {
 
 export type SemaphoreStatus = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'EXPIRED';
 
+export interface CertificateParseResult {
+  commonName: string | null;
+  subject: string | null;
+  issuer: string | null;
+  serialNumber: string | null;
+  algorithm: string | null;
+  keySize: number | null;
+  issueDate: string | null;
+  expirationDate: string | null;
+  suggestedName: string | null;
+  certificatePem: string | null;
+}
+
 export interface Certificate {
   id: number;
   name: string;
@@ -51,6 +64,7 @@ export interface Certificate {
   notes: string | null;
   status: string;
   lastChangeReference: string | null;
+  certificateFilePresent: boolean;
   applications: ApplicationSummary[];
   deployments: DeploymentSummary[];
   createdAt: string;

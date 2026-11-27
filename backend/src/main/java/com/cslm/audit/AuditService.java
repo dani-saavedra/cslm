@@ -16,7 +16,7 @@ public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logCreate(String entityName, Object entityId) {
         save("CREATE", entityName, entityId, null, null, null);
     }
